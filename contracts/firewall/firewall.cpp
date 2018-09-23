@@ -61,12 +61,25 @@ namespace EosShield{
         reportIndex reports(_self, _self);
         eosio_assert(reporter != account, "You can't report yourself silly!");
 
-        reports.emplace(_self, [&](auto& report){
-            report.key  = reports.available_primary_key();
-            report.accountName = account;
-            report.url = url;
-            report.details = details;
-        });
+        auto reportedIndex = reports.get_index<N(account)>();
+        auto itr = reportedIndex.find(account);
+
+        //If it doesn't exist we create a new one
+        if(itr == reportedIndex.end()){
+            reports.emplace(_self, [&](auto& report){
+                report.key  = reports.available_primary_key();
+                report.accountName = account;
+                report.url = url;
+                report.details = details;
+            });
+        }
+        else{
+            auto iterator = reports.find(itr->key);
+            reports.modify(iterator, _self, [&](auto& report){
+                report.details = details;
+                report.url = url;
+            });
+        }
 
         cveIndex cves(_self, _self);
         auto iterator = cves.find(account);
@@ -78,6 +91,34 @@ namespace EosShield{
                 cve.url = std::string("");
                 cve.details = std::string("One or more users reported this account as malicious but the report has not been confirmed.");
                 cve.cveReference = std::string("");
+            });
+        }
+    }
+
+    void Firewall::addmalware(checksum256& codeHash, uint64_t riskLevel, string& details){
+        require_auth(_self);
+                print("iteratring");
+
+        malwareIndex signatures(_self, _self);
+        auto hashIndex = signatures.get_index<N(codeHash)>();
+        auto itr = hashIndex.find(malware::get_commitment(codeHash));
+        //create if it doesn't exist
+        if(itr == hashIndex.end()){
+            print("creating");
+            signatures.emplace(_self, [&](auto& malware){
+                malware.key = signatures.available_primary_key();
+                malware.riskLevel = riskLevel;
+                malware.details = details;
+                malware.codeHash = codeHash;
+            });
+            print("emplaced");
+        }
+        else{ //otherwise update the risk settings
+            print("it exits");
+            auto iterator = signatures.find(itr->key);
+            signatures.modify(iterator, _self, [&](auto& malware){
+                malware.riskLevel = riskLevel;
+                malware.details = details;
             });
         }
     }
