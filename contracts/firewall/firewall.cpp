@@ -55,6 +55,14 @@ namespace EosShield{
         }
     }
 
+    void Firewall::checktrust(account_name account){
+        trustedIndex trusteds(_self, _self);
+        auto iterator = trusteds.find(account);
+        if(iterator == trusteds.end()){
+            eosio_assert(false, "That account has not been vetted and approved.");
+        }
+    }
+
     void Firewall::reportacct(account_name reporter, account_name account, string& url, string& details){
         require_auth(reporter);
 
@@ -97,29 +105,46 @@ namespace EosShield{
 
     void Firewall::addmalware(checksum256& codeHash, uint64_t riskLevel, string& details){
         require_auth(_self);
-                print("iteratring");
 
         malwareIndex signatures(_self, _self);
         auto hashIndex = signatures.get_index<N(codeHash)>();
         auto itr = hashIndex.find(malware::get_commitment(codeHash));
         //create if it doesn't exist
         if(itr == hashIndex.end()){
-            print("creating");
             signatures.emplace(_self, [&](auto& malware){
                 malware.key = signatures.available_primary_key();
                 malware.riskLevel = riskLevel;
                 malware.details = details;
                 malware.codeHash = codeHash;
             });
-            print("emplaced");
         }
         else{ //otherwise update the risk settings
-            print("it exits");
             auto iterator = signatures.find(itr->key);
             signatures.modify(iterator, _self, [&](auto& malware){
                 malware.riskLevel = riskLevel;
                 malware.details = details;
             });
         }
+    }
+
+    void Firewall::addtrusted(account_name account, string& description, checksum256& codeHash){
+        require_auth(_self);
+
+        trustedIndex trusteds(_self, _self);
+        auto iterator = trusteds.find(account);
+        if(iterator == trusteds.end()){
+            trusteds.emplace(_self, [&](auto& trusted){
+                trusted.account = account;
+                trusted.description = description;
+                trusted.codeHash = codeHash;
+            });
+        }
+        else{
+            trusteds.modify(iterator, _self, [&](auto& trusted){
+                trusted.description = description;
+                trusted.codeHash = codeHash;
+            });
+        }
+        print("Created Trusted Acco unt");
     }
 }

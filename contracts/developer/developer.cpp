@@ -12,13 +12,9 @@ namespace Developer{
 
         public:
             //@abi action
-            void test(){
-                transaction trx;
-                action(
-                    permission_level{_self, N(active)},
-                    N(hashtest), N(forward),
-                    std::make_tuple(trx)
-                ).send();
+            void test(account_name account){
+                print("authed");
+                action(permission_level{_self, N(active)}, N(firewall), N(checkacct),std::make_tuple(account,uint64_t(0))).send();
             }
     };
 

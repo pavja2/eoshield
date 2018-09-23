@@ -26,6 +26,12 @@ namespace EosShield {
 
             //@abi action
             void reportacct(account_name reporter, account_name account, string& url, string& details);
+
+            //@abi action
+            void addtrusted(account_name account, string& description, checksum256& codeHash);
+
+            //@abi action
+            void checktrust(account_name account);
         private:
 
             //@abi table cve i64
@@ -38,6 +44,16 @@ namespace EosShield {
                 uint64_t primary_key() const {return accountName;}
 
                 EOSLIB_SERIALIZE(cve, (accountName)(riskLevel)(url)(details)(cveReference))
+            };
+
+            //@abi table trusted i64
+            struct trusted{
+                account_name account;
+                string description;
+                checksum256 codeHash;
+
+                uint64_t primary_key() const{return account;}
+                EOSLIB_SERIALIZE(trusted, (account)(description)(codeHash))
             };
             
             //@abi table cve i64
@@ -78,7 +94,9 @@ namespace EosShield {
             
             typedef multi_index<N(malware), malware,
                 indexed_by<N(codeHash), const_mem_fun<malware, key256, &malware::get_hash>>> malwareIndex;
+            
+            typedef multi_index<N(trusted), trusted> trustedIndex;
     };
-    EOSIO_ABI(Firewall, (addacct)(updateacct)(checkacct)(reportacct)(addmalware))
+    EOSIO_ABI(Firewall, (addacct)(updateacct)(checkacct)(reportacct)(addmalware)(addtrusted)(checktrust))
 }
 
